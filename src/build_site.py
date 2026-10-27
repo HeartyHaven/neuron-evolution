@@ -143,7 +143,8 @@ def build(cfg):
     body = open(os.path.join(HERE, "site.html"), encoding="utf-8").read()
     with open(os.path.join(root, "index.html"), "w", encoding="utf-8") as f:
         f.write('<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
-                '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n</head>\n<body>\n'
+                '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
+                '<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Crect width=%2724%27 height=%2724%27 rx=%276%27 fill=%27%232a78d6%27/%3E%3Cpath d=%27M5 12h4.5c2.6 0 3.4-5 6.5-5h1.5M9.5 12c2.6 0 3.4 5 6.5 5h1.5%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%271.9%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%275%27 cy=%2712%27 r=%272%27 fill=%27%23fff%27/%3E%3Ccircle cx=%2718.5%27 cy=%277%27 r=%272.3%27 fill=%27%23eb6834%27 stroke=%27%23fff%27 stroke-width=%271.2%27/%3E%3Ccircle cx=%2718.5%27 cy=%2717%27 r=%272.3%27 fill=%27%231baf7a%27 stroke=%27%23fff%27 stroke-width=%271.2%27/%3E%3C/svg%3E">\n</head>\n<body>\n'
                 + body + "\n</body>\n</html>\n")
     log(f"site written to {root}")
     return root

@@ -35,7 +35,9 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--surface-1); border-bottom: 1px solid var(--border);
   padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
-header h1 { font-size: 16px; margin: 0 8px 0 0; text-wrap: balance; }
+.brand { display: inline-flex; align-items: center; gap: 8px; margin-right: 8px; }
+.brand .logo { width: 24px; height: 24px; flex: none; display: block; }
+header h1 { font-size: 16px; margin: 0; text-wrap: balance; }
 .ctl { color: var(--text-secondary); font-size: 13px; display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 select, input, button { font: inherit; color: var(--text-primary); background: var(--surface-1);
   border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; max-width: 100%; }
@@ -147,7 +149,7 @@ table.evo td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 </style>
 
 <header>
-  <h1 id="t-title"></h1>
+  <span class="brand"><svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="6" fill="var(--accent)"/><path d="M5 12h4.5c2.6 0 3.4-5 6.5-5h1.5M9.5 12c2.6 0 3.4 5 6.5 5h1.5" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/><circle cx="5" cy="12" r="2" fill="#fff"/><circle cx="18.5" cy="7" r="2.3" fill="var(--series-2)" stroke="#fff" stroke-width="1.2"/><circle cx="18.5" cy="17" r="2.3" fill="var(--series-3)" stroke="#fff" stroke-width="1.2"/></svg><h1 id="t-title"></h1></span>
   <span class="ctl"><span id="t-grouping"></span><select id="grouping"></select></span>
   <span class="ctl"><label for="search" id="t-search"></label><input id="search" size="18"></span>
   <span class="muted small" id="hdrinfo"></span>

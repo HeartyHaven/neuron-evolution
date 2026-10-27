@@ -1,0 +1,10 @@
+torch>=2.1
+transformers>=4.40
+tokenizers
+numpy
+scipy
+matplotlib
+pyyaml
+huggingface_hub
+openai>=1.66
+anthropic

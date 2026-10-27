@@ -1,0 +1,894 @@
+<title>Pythia Neuron Explorer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Left: pick a neuron (map, groups, list). Right: one neuron. Single column on narrow screens. */
+:root {
+  --surface-0: #f4f4f2; --surface-1: #fcfcfb; --surface-2: #f0efec; --border: #e2e1dc;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #85847f;
+  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100; --series-5: #e87ba4; --series-6: #008300; --series-7: #6250d6; --series-8: #e34948; --series-other: #a8a7a0;
+  --dot-muted: #cfcec8; --accent: #2a78d6; --on-accent: #ffffff; --hl: 42, 120, 214; --hit: #0b0b0b; --sel-row: #e6f0fb;
+  --shadow: rgba(0, 0, 0, .18);
+  --font-ui: -apple-system, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Noto Sans Mono CJK SC", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #242422; --border: #33332f;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767; --series-other: #6b6a63;
+    --dot-muted: #45443f; --accent: #3987e5; --on-accent: #ffffff; --hl: 57, 135, 229; --hit: #f0efec; --sel-row: #1d2b3d;
+    --shadow: rgba(0, 0, 0, .5);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #242422; --border: #33332f;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767; --series-other: #6b6a63;
+  --dot-muted: #45443f; --accent: #3987e5; --on-accent: #ffffff; --hl: 57, 135, 229; --hit: #f0efec; --sel-row: #1d2b3d;
+  --shadow: rgba(0, 0, 0, .5);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-0); color: var(--text-primary); font: 14px/1.55 var(--font-ui); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--surface-1); }
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--surface-1); border-bottom: 1px solid var(--border);
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+header h1 { font-size: 16px; margin: 0 8px 0 0; text-wrap: balance; }
+.ctl { color: var(--text-secondary); font-size: 13px; display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+select, input, button { font: inherit; color: var(--text-primary); background: var(--surface-1);
+  border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; max-width: 100%; }
+button { cursor: pointer; }
+button:focus-visible, select:focus-visible, input:focus-visible, .group:focus-visible, .nrow:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.langs { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.hlinks { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-left: auto; }
+.hbtn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; line-height: 1.4; padding: 3px 11px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface-1); color: var(--text-primary); text-decoration: none; cursor: pointer; white-space: nowrap; }
+.hbtn:hover { background: var(--surface-2); border-color: var(--text-muted); }
+.hbtn svg { width: 15px; height: 15px; fill: currentColor; flex: none; }
+.hbtn .q { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-size: 11px; font-weight: 700; }
+#guidebox { width: min(520px, calc(100% - 32px)); max-height: calc(100vh - 48px); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px 14px;
+  background: var(--surface-1); color: var(--text-primary); box-shadow: 0 8px 30px var(--shadow); }
+#guidebox::backdrop { background: rgba(0, 0, 0, .35); }
+#guidebox h2 { font-size: 16px; margin: 0 0 4px; }
+#guidebox ol { list-style: none; counter-reset: g; padding: 0; margin: 8px 0; }
+#guidebox li { counter-increment: g; display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; margin: 10px 0; font-size: 13px; color: var(--text-secondary); }
+#guidebox li::before { content: counter(g); display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-2); color: var(--text-primary); font-size: 12px; font-weight: 600; }
+#guidebox li b { color: var(--text-primary); }
+#guidebox .gfoot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+.langs button { border: 0; border-radius: 0; padding: 3px 10px; background: var(--surface-1); }
+.langs button.on { background: var(--accent); color: var(--on-accent); }
+.panel-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.panel-head h2 { margin-right: auto; }
+.panel-head .langs { margin-left: 0; font-size: 12px; }
+.layout { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 14px; align-items: start;
+  padding-block: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.layout > * { min-width: 0; }
+#left { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 64px); max-height: calc(100vh - 78px); overflow: auto; }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  #left { position: static; max-height: none; }
+  #nlist { max-height: 360px; overflow: auto; }
+}
+.panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; min-width: 0; }
+.panel h2 { font-size: 14px; margin: 0 0 6px; text-wrap: balance; }
+.muted { color: var(--text-muted); }
+.small { font-size: 12px; }
+.sec { color: var(--text-secondary); }
+#map { width: 100%; height: auto; aspect-ratio: 36 / 26; max-width: 100%; display: block; }
+.group { padding: 6px 8px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
+.group:hover { background: var(--surface-2); }
+.group.active { border-color: var(--accent); background: var(--sel-row); }
+.group .gname { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; font-size: 13px; }
+.group .gdesc { font-size: 12px; color: var(--text-secondary); }
+.bar { height: 4px; border-radius: 2px; background: var(--series-1); margin-top: 3px; }
+.nrow { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 6px; padding: 4px 6px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.nrow:hover { background: var(--surface-2); }
+.nrow.sel { background: var(--sel-row); }
+.nrow .nid { font-variant-numeric: tabular-nums; font-weight: 600; }
+.chip { display: inline-block; background: var(--surface-2); border-radius: 999px; padding: 0 8px; font-size: 12px;
+  color: var(--text-secondary); margin: 1px 4px 1px 0; }
+.chip b { color: var(--text-primary); font-weight: 600; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 14px; }
+.card h3 { margin: 0 0 6px; font-size: 14px; }
+.kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 10px; font-size: 13px; margin: 6px 0; }
+.kv div:nth-child(odd) { color: var(--text-muted); }
+.chain { border-left: 2px solid var(--border); margin: 6px 0 0 4px; padding-left: 10px; font-size: 13px; }
+.chain div { margin-bottom: 4px; }
+.chain .st { font-variant-numeric: tabular-nums; color: var(--text-muted); margin-right: 4px; }
+details summary { cursor: pointer; color: var(--text-secondary); font-size: 12px; }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 14px; }
+.chart svg { width: 100%; height: 190px; display: block; overflow: visible; }
+svg text { fill: var(--text-muted); font-size: 11px; }
+.chart .ttl { font-size: 13px; font-weight: 600; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--text-secondary); margin: 2px 0 4px; }
+.legend span { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+.scroll-x { overflow-x: auto; max-width: 100%; }
+table.evo { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
+table.evo th { text-align: left; color: var(--text-muted); font-weight: 500; font-size: 12px; border-bottom: 1px solid var(--border); padding: 4px 6px; }
+table.evo td { border-bottom: 1px solid var(--border); padding: 5px 6px; vertical-align: top; }
+table.evo tr { cursor: pointer; }
+table.evo tbody tr:hover td { background: var(--surface-2); }
+table.evo tr.sel td { background: var(--sel-row); }
+table.evo td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.detbar { display: inline-block; height: 8px; border-radius: 2px; background: var(--series-1); vertical-align: middle; margin-right: 4px; }
+.mechtbl { border-collapse: collapse; font-size: 12px; margin-top: 6px; }
+.mechtbl td, .mechtbl th { padding: 2px 6px; border-bottom: 1px solid var(--border); text-align: right; font-variant-numeric: tabular-nums; }
+.mechtbl th:first-child, .mechtbl td:first-child { text-align: left; white-space: nowrap; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+.lin { font-size: 13px; margin: 3px 0; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 14px; }
+.cols > * { min-width: 0; }
+.pat { font-size: 13px; margin: 3px 0; }
+.pat code { background: var(--surface-2); border-radius: 4px; padding: 0 4px; font-size: 12px; font-family: var(--font-mono); word-break: break-word; }
+.ctx { border-top: 1px solid var(--border); padding: 8px 0; }
+.ctx .meta { font-size: 12px; color: var(--text-muted); display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+.ctx .meta b { color: var(--text-primary); }
+.text { white-space: pre-wrap; word-break: break-word; font: 13px/1.75 var(--font-mono); }
+.text span.t { border-radius: 3px; }
+.text span.hit { outline: 2px solid var(--hit); font-weight: 700; }
+.text .nl { color: var(--text-muted); }
+#tip { position: fixed; z-index: 50; pointer-events: none; display: none; background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font-size: 12px; box-shadow: 0 2px 10px var(--shadow); max-width: 320px; }
+.empty { padding: 40px 16px; text-align: center; color: var(--text-muted); }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+#c-tree.focus .lin { opacity: .15; }
+.timebar { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.timebar input[type=range] { flex: 1 1 auto; min-width: 0; accent-color: var(--accent); }
+.timebar .lbl { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; min-width: 6.5em; text-align: right; }
+.subttl { font-size: 12px; color: var(--text-secondary); margin: 10px 0 2px; }
+#c-tree.focus .lin.on { opacity: 1; }
+#c-tree .lin.dim { opacity: .12; }
+.legend button { font-size: 12px; padding: 1px 8px; }
+.about { font-size: 13px; color: var(--text-secondary); max-width: 72ch; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<header>
+  <h1 id="t-title"></h1>
+  <span class="ctl"><span id="t-grouping"></span><select id="grouping"></select></span>
+  <span class="ctl"><label for="search" id="t-search"></label><input id="search" size="18"></span>
+  <span class="muted small" id="hdrinfo"></span>
+  <span class="hlinks">
+    <button class="hbtn" id="guide" type="button" aria-haspopup="dialog"><span class="q" aria-hidden="true">?</span><span id="t-guide"></span></button>
+    <a class="hbtn" href="https://github.com/HeartyHaven/pythia-neuron-evolution" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a>
+    <a class="hbtn" href="https://huggingface.co/datasets/LangGao/pythia-160m-neuron-evolution" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1C4.7 1 2 2.1 2 3.5v9C2 13.9 4.7 15 8 15s6-1.1 6-2.5v-9C14 2.1 11.3 1 8 1zm0 1.5c2.8 0 4.5.9 4.5 1s-1.7 1-4.5 1-4.5-.9-4.5-1 1.7-1 4.5-1zM3.5 5.6C4.8 6.2 6.3 6.5 8 6.5s3.2-.3 4.5-.9V8c0 .1-1.7 1-4.5 1S3.5 8.1 3.5 8V5.6zm0 4.5c1.3.6 2.8.9 4.5.9s3.2-.3 4.5-.9v2.4c0 .1-1.7 1-4.5 1s-4.5-.9-4.5-1v-2.4z"/></svg><span id="t-data"></span></a>
+  </span>
+</header>
+<dialog id="guidebox" aria-labelledby="guide-h"><h2 id="guide-h"></h2><ol id="guide-list"></ol>
+  <div class="gfoot"><span id="guide-foot"></span><button type="button" id="guide-close"></button></div></dialog>
+<div class="layout">
+  <aside id="left">
+    <div class="panel">
+      <h2 id="t-map"></h2>
+      <div class="muted small" id="t-mapdesc"></div>
+      <svg id="map" viewBox="0 0 360 260" role="img"></svg>
+      <div class="small" id="anchorbar" hidden><span id="anchorlbl"></span> <button id="anchorclear" type="button"></button></div>
+      <div class="timebar"><button id="mapplay" type="button">▶</button><input type="range" id="mapstep" min="0" max="39" value="39"><span class="lbl" id="mapsteplabel"></span></div>
+    </div>
+    <div class="panel">
+      <h2 id="gtitle"></h2>
+      <div id="groups"></div>
+    </div>
+    <div class="panel">
+      <h2><span id="t-neurons"></span> <span class="muted small" id="ncount"></span></h2>
+      <div id="nlist"></div>
+    </div>
+  </aside>
+  <main id="right"></main>
+</div>
+<div id="tip"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const S = { famFocus: null, colorBy: "mech", mapIdx: 39, playing: null, anchor: null, sim: null, mapPos: {}, anim: null, meta: null, layers: {}, grouping: "category", group: null, sel: null, step: null, cmp: null, topn: 5, query: "", lang: "en" };
+
+// ---------- UI text ----------
+const T = {
+  en: {
+    guide: "Guide", data: "Dataset", close: "Got it", guideTitle: "How to read this page",
+    guideItems: [
+      ["Pick a neuron", "Use the map, the groups or search (e.g. L6/N201) on the left. Closer dots have more alike descriptions; drag the slider or press ▶ to move through training; double-click a dot to center the map on it."],
+      ["Concept evolution chart", "Each line is one concept; training runs left to right. A fork from another line = derived from an older concept; a color change on the same line = replacement; entering with a hollow circle = an unrelated new concept; bottom row = seen only once."],
+      ["Click a line", "Shows only its family; click again to restore. The top-right toggle colors by mechanism or by family."],
+      ["Bar chart", "Which concepts carry the activation of the 10 strongest passages at each stage. Hover for percentages; click a column to jump to that stage."],
+      ["Table and text", "Click a row to see the AI's explanation and the original text at that stage; the bluer, the stronger. Use ← → to change stage, or compare two stages side by side."],
+    ],
+    guideFoot: "Hover lines, numbers and titles for details.",
+    title: "Neuron Evolution Explorer", grouping: "Group by", search: "Search", searchPh: "e.g. L6/N201, or a word",
+    info: (n, k) => `Pythia-160M language model · ${n} neurons · ${k} training stages`,
+    map: "Neurons with similar explanations", mapdesc: "Closer dots have more alike descriptions. Click to switch; double-click to anchor.", anchorOn: x => `Anchor: ${x}`, anchorClear: "Clear anchor", mapAxis: "Training stage", play: "Play",
+    panelTitle: "How the concepts it responds to evolved",
+    coreTag: "core concept", treeReplaces: p => `took the place of "${p}", which disappeared here`,
+    neurons: "Neurons", all: "All", nomatch: "No neurons match.", loading: l => `Loading layer ${l}…`,
+    intro: `<h2>What this is</h2><p class="about">How 240 neurons of Pythia-160M evolve over 40 training stages. Pick a neuron on the left.</p>`,
+    type: "Content type", traj: "Curve shape", evo: "How it evolved", denoise: "Like denoising?", lateDom: "Late-training makeup",
+    rgCard: "AI summary: how it evolved", diffCard: "AI summary: did it sharpen gradually, like denoising?", core: "Core idea", unrelated: "Unrelated to the core", chain: "How it extended", evidence: "AI's reasoning",
+    commit: "Final idea first appears", saturation: "Stops getting clearer at", cbf: "Broad direction settled before details", trend: "How clarity changed",
+    mechTitle: "Share of activation in the 10 strongest responses, by mechanism", confLbl: "AI confidence", confTip: "The AI's own confidence in this call, not a statistical probability",
+    shareHdr: "Share %", lateTip: "The mechanism holding over half of the activation on average late in training (from step 16000)",
+    colTips: ["", "", "Accuracy at telling strong-response text from random text using only the explanation; 0.5 is chance, — means not tested", "The AI's own rating, 1–5", "", ""],
+    colorMech: "Color by mechanism", colorFam: "Color by family", famTitle: "Share of activation in the 10 strongest responses, by family", famOther: "other, smaller families",
+    treeFam: r => `part of the "${r}" family`, famFocus: r => `Only the "${r}" family`, showAll: "Show all families",
+    table: "Show the numbers", mech: "Kind of content", lineages: c => `This neuron's themes (core: ${c})`, firstSeen: s => `first seen at step ${s}`,
+    simTitle: "How close it is to its end-of-training state", simLegend: ["Broad direction: which kinds of text it prefers", "The exact words", "The exact passages"], simShort: ["broad", "words", "passages"],
+    detTitle: "Accuracy of the AI's explanation (0.5 is chance)", detName: "accuracy", snrTitle: "How focused its response is",
+    chartNote: "The dashed line marks the training stage you are viewing.",
+    evoTitle: "The AI's description at each training stage",
+    cols: ["step", "loss", "explanation accuracy", "pattern clarity", "in short", "full description"],
+    show: "Show", compare: "Compare side by side with", noCompare: "nothing", prev: "Previous stage (←)", next: "Next stage (→)",
+    textNote: "The bluer the background, the stronger the response; the box marks the strongest spot in each passage.",
+    actual: (a, b) => `Text it responded to most at step ${a}` + (b != null ? ` (compared with step ${b})` : ""),
+    patterns: k => `Patterns the AI found (${k})`, seg: "see passages", act: "response", doc: "document", pos: "position",
+    stepMeta: (r, rel, un) => `explanation accuracy ${r.det == null ? "—" : r.det.toFixed(2)} · pattern clarity ${r.clarity ?? "—"}/5 · the patterns are ${rel}${un}`,
+    unexplained: u => ` · passages left unexplained ${u}`, tipAct: (v, a) => `response ≈ ${v} (${a}% of the strongest)`,
+    treeTitle: "How the themes it responds to appear, extend and fade",
+    treeSpan: (a, b) => `appears at step ${a}, gone after step ${b}`, treeOngoing: a => `appears at step ${a} and lasts to the end of training`, treeOnce: a => `appears only at step ${a}`,
+    treeFrom: p => `grew out of "${p}"`,
+  },
+};
+const ENUM = {
+  en: {
+    rg: { recursive_generalization: "grew out from a core (recursive generalization)", superposition: "unrelated things coexist (superposition)", replacement: "replaced by something else", stable_monosemantic: "always one thing", mixed: "mixed", uninterpretable: "no clear pattern" },
+    diff: { denoising: "sharpened gradually (like denoising)", drift: "changed content midway", phase_transition: "appeared suddenly", early_fixed: "settled early", late_degradation: "got blurrier late", unclear: "unclear" },
+    dom: { branch: "mostly branches (recursive generalization)", coexist: "mostly unrelated coexistence", replace: "mostly replacement", sporadic: "mostly sporadic", none: "no clear majority", unknown: "not analyzed" },
+    mech: { branch: "branch (recursive generalization)", coexist: "unrelated coexistence", replace: "replacement", sporadic: "sporadic", unexplained: "unexplained" },
+    cbf: { yes: "yes", no: "no", unclear: "unclear" },
+    trend: { monotonic_up: "kept getting clearer", up_then_plateau: "got clearer, then leveled off", non_monotonic: "up and down", flat: "stayed about the same", down: "got blurrier" },
+    rel: { single: "a single pattern", related: "related to each other", unrelated: "unrelated to each other", unclear: "of unclear relation" },
+  },
+};
+const MECH = [["branch", "var(--series-2)"], ["coexist", "var(--series-3)"], ["replace", "var(--series-4)"],
+  ["sporadic", "var(--series-5)"], ["unexplained", "var(--series-other)"]];
+const MECH_COLOR = Object.fromEntries(MECH);
+// Family = root reached by following derived-from links; the 8 largest roots get a color, the rest gray
+const FAM_COLORS = [1, 2, 3, 4, 5, 6, 7, 8].map(i => `var(--series-${i})`);
+function families(n) {
+  if (n._fam) return n._fam;
+  const byId = Object.fromEntries(n.lineages.map(g => [g.id, g])), rootOf = {}, tot = {};
+  for (const g0 of n.lineages) {
+    if (!g0.birth) continue;
+    let g = g0;
+    const seen = new Set();
+    while (g.birth === "branch" && byId[g.birth_parent] && !seen.has(g.id)) { seen.add(g.id); g = byId[g.birth_parent]; }
+    rootOf[g0.id] = g.id;
+  }
+  for (const sh of n.lineage_shares) for (const id in sh) if (rootOf[id]) tot[rootOf[id]] = (tot[rootOf[id]] || 0) + sh[id];
+  const roots = [...new Set(Object.values(rootOf))].sort((a, b) => (tot[b] || 0) - (tot[a] || 0));
+  const slot = Object.fromEntries(roots.map((r, i) => [r, i < FAM_COLORS.length ? i : -1]));
+  return (n._fam = { rootOf, roots, slot });
+}
+// Bar/legend key of the focused family (small families fall under "other")
+const focusKey = n => !S.famFocus ? null : (families(n).slot[S.famFocus] >= 0 ? S.famFocus : "_other");
+const famSlot = (n, id) => { const f = families(n); return f.slot[f.rootOf[id]] ?? -1; };
+function linColor(n, g) {
+  if (S.colorBy !== "family") return MECH_COLOR[g.birth] || "var(--series-other)";
+  const i = famSlot(n, g.id);
+  return i >= 0 ? FAM_COLORS[i] : "var(--series-other)";
+}
+const arrowKey = (n, g) => S.colorBy !== "family" ? g.birth : (famSlot(n, g.id) >= 0 ? "f" + famSlot(n, g.id) : "fo");
+// Series shared by bars, legend and table: mechanisms, or top families + other + unexplained
+function barSeries(n) {
+  if (S.colorBy !== "family") return MECH.map(([m, c]) => ({ key: m, label: E("mech", m), color: c, vals: n.mech[m] }));
+  const f = families(n), idx = id => n.lineages.findIndex(g => g.id === id);
+  const top = f.roots.filter(r => f.slot[r] >= 0);
+  const vals = key => n.lineage_shares.map(sh => {
+    let v = 0;
+    for (const id in sh) { const r = f.rootOf[id]; if (r && (key === "_other" ? f.slot[r] < 0 : r === key)) v += sh[id]; }
+    return v;
+  });
+  return top.map(r => ({ key: r, label: Li(n, "lineages", idx(r), "name"), color: FAM_COLORS[f.slot[r]], vals: vals(r) }))
+    .concat([{ key: "_other", label: t("famOther"), color: "var(--series-other)", vals: vals("_other") },
+      { key: "unexplained", label: E("mech", "unexplained"), color: "var(--dot-muted)", vals: n.mech.unexplained }])
+    .filter(x => x.vals.some(v => v > 0));
+}
+const t = k => T[S.lang][k];
+const E = (kind, v) => (ENUM[S.lang][kind] || {})[v] ?? v ?? "—";
+const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const fmtStep = s => `step ${Number(s).toLocaleString("en")}`;
+const fmtAxis = s => s >= 1000 ? (s / 1000) + "k" : String(s);
+const num = s => S.lang === "en" ? Number(s).toLocaleString("en") : String(s);
+const pct = v => Math.round((v || 0) * 100) + "%";
+const conf = c => c == null ? "" : ` <span class="muted" title="${esc(t("confTip"))}">· ${t("confLbl")} ${Math.round(c * 100)}%</span>`;
+const L = (obj, f) => (S.lang === "en" && obj && obj.en && obj.en[f]) ? obj.en[f] : obj ? obj[f] : "";
+const Li = (obj, listF, i, f) => {
+  if (S.lang === "en" && obj && obj.en && obj.en[listF] && obj.en[listF][i]) {
+    const v = obj.en[listF][i];
+    return f ? (v[f] ?? obj[listF][i][f]) : v;
+  }
+  const v = obj[listF][i];
+  return f ? v[f] : v;
+};
+const gname = (it, k) => it ? (S.lang === "en" ? it.name_en || it.name : it.name) : k;
+const gdesc = it => it ? (S.lang === "en" ? it.desc_en || it.desc : it.desc) : "";
+
+function tip(ev, html) {
+  const el = $("tip");
+  if (!html) { el.style.display = "none"; return; }
+  el.innerHTML = html; el.style.display = "block";
+  el.style.left = Math.max(8, Math.min(ev.clientX + 12, innerWidth - el.offsetWidth - 8)) + "px";
+  el.style.top = Math.max(8, Math.min(ev.clientY + 14, innerHeight - el.offsetHeight - 8)) + "px";
+}
+
+// ---------- text ----------
+function setLang(lang) {
+  S.lang = lang;
+  $("t-title").textContent = t("title");
+  $("t-guide").textContent = t("guide");
+  $("t-data").textContent = t("data");
+  $("guide-h").textContent = t("guideTitle");
+  $("guide-list").innerHTML = t("guideItems").map(([a, b]) => `<li><div><b>${esc(a)}</b><br>${esc(b)}</div></li>`).join("");
+  $("guide-foot").textContent = t("guideFoot");
+  $("guide-close").textContent = t("close");
+  $("t-grouping").textContent = t("grouping");
+  $("t-search").textContent = t("search");
+  $("search").placeholder = t("searchPh");
+  $("t-map").textContent = t("map");
+  $("t-mapdesc").textContent = t("mapdesc");
+  $("map").setAttribute("aria-label", t("map"));
+  $("mapstep").setAttribute("aria-label", t("mapAxis"));
+  $("mapplay").setAttribute("aria-label", t("play"));
+  $("mapplay").title = t("play");
+  $("anchorclear").textContent = t("anchorClear");
+  if (S.anchor) { const an = S.meta && S.meta.neurons.find(x => x.id === S.anchor); if (an) $("anchorlbl").textContent = t("anchorOn")(`L${an.layer}/N${an.neuron}`); }
+  $("t-neurons").textContent = t("neurons");
+  if (!S.meta) return;
+  $("hdrinfo").textContent = t("info")(S.meta.neurons.length, S.meta.steps.length);
+  $("grouping").innerHTML = Object.entries(S.meta.groups).filter(([k]) => k !== "cluster").map(([k, g]) =>
+    `<option value="${k}">${esc(S.lang === "en" ? g.title_en || g.title : g.title)}</option>`).join("");
+  $("grouping").value = S.grouping;
+  renderLeft();
+  if (S.rows) renderRight(); else $("right").innerHTML = `<div class="panel">${t("intro")}</div>`;
+}
+
+// ---------- groups ----------
+function groupKey(n) {
+  const g = S.grouping;
+  return g === "category" ? n.category : g === "cluster" ? String(n.cluster) : g === "rg" ? n.rg : g === "diff" ? n.diff
+    : g === "dominant" ? n.dominant : String(n.layer);
+}
+function matches(n) {
+  if (S.group != null && groupKey(n) !== S.group) return false;
+  const q = S.query.trim().toLowerCase();
+  if (!q) return true;
+  if (`l${n.layer}/n${n.neuron}`.includes(q.replace(/\s/g, ""))) return true;
+  const fields = ["label", "core", "rg_summary", "diff_summary", "core_summary"];
+  return fields.some(f => String(n[f] || "").toLowerCase().includes(q) || String((n.en || {})[f] || "").toLowerCase().includes(q));
+}
+function renderGroups() {
+  const G = S.meta.groups[S.grouping];
+  $("gtitle").textContent = S.lang === "en" ? G.title_en || G.title : G.title;
+  const cnt = {};
+  for (const n of S.meta.neurons) cnt[groupKey(n)] = (cnt[groupKey(n)] || 0) + 1;
+  const keys = G.order.filter(k => cnt[k]).concat(Object.keys(cnt).filter(k => !G.order.includes(k)));
+  const max = Math.max(...Object.values(cnt));
+  let h = `<div class="group ${S.group == null ? "active" : ""}" data-k="" tabindex="0"><div class="gname"><span>${t("all")}</span><span>${S.meta.neurons.length}</span></div></div>`;
+  for (const k of keys) {
+    const it = G.items[k];
+    h += `<div class="group ${S.group === k ? "active" : ""}" data-k="${esc(k)}" tabindex="0">
+      <div class="gname"><span>${esc(gname(it, k))}</span><span>${cnt[k]}</span></div>
+      <div class="bar" style="width:${100 * cnt[k] / max}%"></div>
+      ${gdesc(it) ? `<div class="gdesc">${esc(gdesc(it))}</div>` : ""}</div>`;
+  }
+  $("groups").innerHTML = h;
+  for (const el of $("groups").querySelectorAll(".group")) {
+    const go = () => { S.group = el.dataset.k === "" ? null : el.dataset.k; renderLeft(); };
+    el.onclick = go;
+    el.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } };
+  }
+}
+function renderList() {
+  const list = S.meta.neurons.filter(matches);
+  $("ncount").textContent = `(${list.length})`;
+  $("nlist").innerHTML = list.map(n => `<div class="nrow ${S.sel === n.id ? "sel" : ""}" data-id="${n.id}" tabindex="0">
+    <span class="nid">L${n.layer}/N${n.neuron}</span>
+    <span>${esc(L(n, "label"))}<br><span class="chip">${esc(E("dom", n.dominant))}</span><span class="chip">${esc(E("diff", n.diff))}</span></span></div>`).join("")
+    || `<div class="muted small">${t("nomatch")}</div>`;
+  for (const el of $("nlist").querySelectorAll(".nrow")) {
+    el.onclick = () => select(el.dataset.id);
+    el.onkeydown = e => { if (e.key === "Enter") select(el.dataset.id); };
+  }
+}
+async function loadSim() {
+  if (S.sim) return S.sim;
+  const d = await (await fetch("data/sim.json")).json();
+  const N = d.order.length;
+  const steps = d.steps.map(b64 => { const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a; });
+  // one global scale: the largest pairwise semantic distance over all steps
+  let qmin = 255;
+  for (const a of steps) for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (r !== c && a[r * N + c] < qmin) qmin = a[r * N + c];
+  const dmax = 1 - (d.lo + qmin / 255 * (d.hi - d.lo));
+  S.sim = { lo: d.lo, hi: d.hi, N, dmax, idx: Object.fromEntries(d.order.map((id, i) => [id, i])), steps };
+  return S.sim;
+}
+// Map position (0-1) of every neuron at step index j
+function mapTargets(j) {
+  const ns = S.meta.neurons.filter(n => n.sem), out = {};
+  const A = S.anchor && S.sim ? ns.find(n => n.id === S.anchor) : null;
+  if (!A) { for (const n of ns) out[n.id] = n.sem[j]; return out; }
+  // anchor view: anchor at the center, radius = semantic distance to the anchor, direction kept from the map
+  const sim = S.sim, row = sim.idx[A.id] * sim.N, mat = sim.steps[j];
+  const dis = n => 1 - (sim.lo + mat[row + sim.idx[n.id]] / 255 * (sim.hi - sim.lo));
+  const dmax = sim.dmax;
+  const [ax, ay] = A.sem[j];
+  for (const n of ns) {
+    if (n.id === A.id) { out[n.id] = [0.5, 0.5]; continue; }
+    const [px, py] = n.sem[j];
+    let ang = Math.atan2(py - ay, px - ax);
+    if (!isFinite(ang) || (px === ax && py === ay)) ang = (sim.idx[n.id] * 2.399963) % (2 * Math.PI);
+    const r = 0.47 * dis(n) / dmax;
+    out[n.id] = [0.5 + r * Math.cos(ang), 0.5 + r * Math.sin(ang)];
+  }
+  return out;
+}
+const MW = 360, MH = 260, MP = 10;
+const mX = v => MP + (MW - 2 * MP) * v, mY = v => MH - MP - (MH - 2 * MP) * v;
+// Rebuilt when structure changes; positions are updated by placeMap so they can animate
+function renderMap(animate) {
+  const svg = $("map"), ns = S.meta.neurons.filter(n => n.sem), j = S.mapIdx;
+  $("mapstep").value = String(j);
+  $("mapsteplabel").textContent = fmtStep(S.meta.steps[j]);
+  const on = ns.filter(matches), off = ns.filter(n => !matches(n));
+  let h = `<circle id="m-ring-anchor" r="9" fill="none" stroke="var(--text-primary)" stroke-width="1.5" stroke-dasharray="3 2" pointer-events="none" visibility="hidden"/>`;
+  h += off.map(n => `<circle r="4" fill="var(--dot-muted)" data-id="${n.id}"/>`).join("");
+  h += on.map(n => `<circle r="4" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="1.5" data-id="${n.id}"/>`).join("");
+  h += `<circle id="m-ring" r="7" fill="none" stroke="var(--series-2)" stroke-width="2.5" pointer-events="none" visibility="hidden"/>`;
+  svg.innerHTML = h;
+  S.mapEls = {};
+  for (const c of svg.querySelectorAll("circle[data-id]")) S.mapEls[c.dataset.id] = c;
+  const target = mapTargets(j);
+  const reduce = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (S.anim) cancelAnimationFrame(S.anim);
+  const from = S.mapPos && Object.keys(S.mapPos).length ? S.mapPos : target;
+  if (!animate || reduce || typeof requestAnimationFrame !== "function") { placeMap(target); return; }
+  const t0 = performance.now(), dur = S.playing ? 380 : 550;
+  const ease = x => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  const frame = now => {
+    const u = ease(Math.min(1, (now - t0) / dur)), cur = {};
+    for (const id in target) {
+      const a = from[id] || target[id], b = target[id];
+      cur[id] = [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+    }
+    placeMap(cur);
+    if (u < 1) S.anim = requestAnimationFrame(frame);
+  };
+  S.anim = requestAnimationFrame(frame);
+}
+function placeMap(pos) {
+  S.mapPos = pos;
+  for (const id in S.mapEls) {
+    const q = pos[id];
+    if (!q) continue;
+    S.mapEls[id].setAttribute("cx", mX(q[0]).toFixed(1));
+    S.mapEls[id].setAttribute("cy", mY(q[1]).toFixed(1));
+  }
+  const svg = $("map"), ring = svg.querySelector("#m-ring"), aring = svg.querySelector("#m-ring-anchor");
+  const sel = S.meta.neurons.find(n => n.id === S.sel && n.sem);
+  if (sel && pos[sel.id]) {
+    ring.setAttribute("cx", mX(pos[sel.id][0])); ring.setAttribute("cy", mY(pos[sel.id][1])); ring.setAttribute("visibility", "visible");
+  } else ring.setAttribute("visibility", "hidden");
+  if (S.anchor && pos[S.anchor]) { aring.setAttribute("cx", mX(pos[S.anchor][0])); aring.setAttribute("cy", mY(pos[S.anchor][1])); aring.setAttribute("visibility", "visible"); }
+  else aring.setAttribute("visibility", "hidden");
+}
+function bindMap() {
+  const svg = $("map");
+  svg.onmousemove = ev => {
+    const c = ev.target.closest("circle[data-id]");
+    if (!c) return tip(ev, null);
+    const n = S.meta.neurons.find(x => x.id === c.dataset.id), j = S.mapIdx;
+    const concept = n.cz[j];
+    tip(ev, `<b>L${n.layer}/N${n.neuron}</b> · ${fmtStep(S.meta.steps[j])}<br>${esc(concept)}`);
+  };
+  svg.onmouseleave = ev => tip(ev, null);
+  // click: select; double-click: toggle anchor
+  svg.onclick = ev => { const c = ev.target.closest("circle[data-id]"); if (c && c.dataset.id !== S.sel) select(c.dataset.id); };
+  svg.ondblclick = ev => { const c = ev.target.closest("circle[data-id]"); if (c) setAnchor(S.anchor === c.dataset.id ? null : c.dataset.id); };
+  $("anchorclear").onclick = () => setAnchor(null);
+}
+async function setAnchor(id) {
+  if (id) await loadSim();
+  S.anchor = id;
+  const n = id ? S.meta.neurons.find(x => x.id === id) : null;
+  $("anchorbar").hidden = !n;
+  if (n) $("anchorlbl").textContent = t("anchorOn")(`L${n.layer}/N${n.neuron}`);
+  renderMap(true);
+}
+function setMapIdx(j) { S.mapIdx = Math.max(0, Math.min(S.meta.steps.length - 1, j)); renderMap(true); }
+function togglePlay() {
+  if (S.playing) { clearInterval(S.playing); S.playing = null; $("mapplay").textContent = "▶"; return; }
+  if (S.mapIdx >= S.meta.steps.length - 1) setMapIdx(0);
+  $("mapplay").textContent = "❚❚";
+  S.playing = setInterval(() => {
+    if (S.mapIdx >= S.meta.steps.length - 1) return togglePlay();
+    setMapIdx(S.mapIdx + 1);
+  }, 600);
+}
+function renderLeft() { renderGroups(); renderList(); renderMap(); }
+
+// ---------- selection ----------
+async function layerData(l) {
+  if (!S.layers[l]) S.layers[l] = await (await fetch(`data/L${l}.json`)).json();
+  return S.layers[l];
+}
+async function select(id, step) {
+  if (S.sel !== id) S.famFocus = null;
+  S.sel = id;
+  const n = S.meta.neurons.find(x => x.id === id);
+  if (!n) return;
+  renderList(); renderMap(false);
+  $("right").innerHTML = `<div class="panel empty">${t("loading")(n.layer)}</div>`;
+  const rows = (await layerData(n.layer))[id];
+  if (S.sel !== id) return;
+  S.rows = rows;
+  S.step = step ?? (S.step != null && rows.some(r => r.step === S.step) ? S.step : rows[rows.length - 1].step);
+  S.cmp = null;
+  renderRight();
+  try { history.replaceState(null, "", `#L${n.layer}-N${n.neuron}`); } catch (e) { /* may be blocked in frames */ }
+}
+
+// ---------- right panel ----------
+function renderRight() {
+  const n = S.meta.neurons.find(x => x.id === S.sel), rows = S.rows;
+  const cat = S.meta.groups.category.items[n.category];
+  $("right").innerHTML = `
+  <div class="panel">
+    <h2 style="font-size:18px">L${n.layer}/N${n.neuron} <span class="sec" style="font-weight:400">${esc(L(n, "label"))}</span></h2>
+    <span class="chip">${t("type")} <b>${esc(gname(cat, n.category))}</b></span>
+    <span class="chip">${t("evo")} <b>${esc(E("rg", n.rg))}</b>${conf(n.rg_conf)}</span><span class="chip" title="${esc(t("lateTip"))}">${t("lateDom")} <b>${esc(E("dom", n.dominant))}</b></span>
+    <span class="chip">${t("denoise")} <b>${esc(E("diff", n.diff))}</b>${conf(n.diff_conf)}</span>
+  </div>
+  <div class="cards">
+    <div class="panel card"><h3>${t("rgCard")} · ${esc(E("rg", n.rg))}${conf(n.rg_conf)}</h3>
+      <div>${esc(L(n, "rg_summary"))}</div>
+      <div class="kv"><div>${t("core")}</div><div>${esc(L(n, "core"))}</div></div>
+      <details><summary>${t("evidence")}</summary><div class="small">${esc(L(n, "rg_evidence"))}</div></details>
+    </div>
+    <div class="panel card"><h3>${t("diffCard")} · ${esc(E("diff", n.diff))}${conf(n.diff_conf)}</h3>
+      <div>${esc(L(n, "diff_summary"))}</div>
+      <div class="kv"><div>${t("commit")}</div><div>${n.commit != null ? fmtStep(n.commit) : "—"}</div>
+        <div>${t("saturation")}</div><div>${n.saturation != null ? fmtStep(n.saturation) : "—"}</div>
+        <div>${t("cbf")}</div><div>${esc(E("cbf", n.cbf))}</div><div>${t("trend")}</div><div>${esc(E("trend", n.trend))}</div></div>
+      <details><summary>${t("evidence")}</summary><div class="small">${esc(L(n, "diff_evidence"))}</div></details>
+    </div>
+  </div>
+  ${evolutionPanel(n)}
+  <div class="panel">
+    <h2>${t("evoTitle")}</h2>
+    <div class="scroll-x"><table class="evo"><thead><tr>${t("cols").map((c, i) => `<th${t("colTips")[i] ? ` title="${esc(t("colTips")[i])}"` : ""}>${c}</th>`).join("")}</tr></thead><tbody id="evo"></tbody></table></div>
+  </div>
+  <div class="panel" id="steppanel">
+    <div class="toolbar">
+      <b id="stephdr"></b>
+      <button id="prev" type="button" title="${t("prev")}" aria-label="${t("prev")}">◀</button><button id="next" type="button" title="${t("next")}" aria-label="${t("next")}">▶</button>
+      <span class="ctl"><label for="topn">${t("show")}</label><select id="topn"><option value="5">top 5</option><option value="10">top 10</option></select></span>
+      <span class="ctl"><label for="cmp">${t("compare")}</label><select id="cmp"><option value="">${t("noCompare")}</option>${rows.map(r => `<option value="${r.step}">${fmtStep(r.step)}</option>`).join("")}</select></span>
+    </div>
+    <div class="muted small">${t("textNote")}</div>
+    <div class="cols" id="stepcols"></div>
+  </div>`;
+  $("topn").value = String(S.topn);
+  $("topn").onchange = e => { S.topn = +e.target.value; renderStep(); };
+  $("cmp").value = S.cmp == null ? "" : String(S.cmp);
+  $("cmp").onchange = e => { S.cmp = e.target.value === "" ? null : +e.target.value; renderStep(); };
+  $("prev").onclick = () => moveStep(-1);
+  $("next").onclick = () => moveStep(1);
+  renderEvo(); renderCharts(); renderStep();
+}
+// ---------- concept evolution chart ----------
+function evolutionPanel(n) {
+  if (!n.lineages || !n.lineages.length || !n.lineage_shares || !n.lineage_shares.length) return "";
+  return `<div class="panel">
+    <div class="panel-head"><h2>${t("panelTitle")}</h2>
+      <span class="langs" id="colorby" role="group"><button type="button" data-c="mech">${t("colorMech")}</button><button type="button" data-c="family">${t("colorFam")}</button></span></div>
+    <div class="legend" id="evo-legend"></div>
+    <svg id="c-tree" style="width:100%;display:block" role="img" aria-label="${esc(t("panelTitle"))}"></svg>
+    <div class="subttl" id="evo-bartitle"></div>
+    <svg id="c-mech" style="width:100%;height:150px;display:block" role="img"></svg>
+    <details><summary>${t("table")}</summary><div class="scroll-x" id="evo-table"></div></details>
+  </div>`;
+}
+function paintEvoText(n) {
+  if (!$("evo-legend")) return;
+  const fam = S.colorBy === "family", ser = barSeries(n);
+  const fk = fam ? focusKey(n) : null, idx = id => n.lineages.findIndex(g => g.id === id);
+  $("evo-legend").innerHTML = ser.map(x => `<span title="${esc(x.label)}"${fk && x.key !== fk ? ' style="opacity:.35"' : ""}><i class="swatch" style="background:${x.color}"></i>${esc(x.label)}</span>`).join("")
+    + (S.famFocus ? `<span>${esc(t("famFocus")(Li(n, "lineages", idx(S.famFocus), "name")))}</span><button type="button" id="famclear">${t("showAll")}</button>` : "");
+  if (S.famFocus) $("famclear").onclick = () => { S.famFocus = null; renderCharts(); };
+  $("evo-bartitle").textContent = t(fam ? "famTitle" : "mechTitle");
+  $("c-mech").setAttribute("aria-label", t(fam ? "famTitle" : "mechTitle"));
+  $("evo-table").innerHTML = `<table class="mechtbl"><tr><th>${t("shareHdr")}</th>${S.meta.steps.map(s => `<th>${fmtAxis(s)}</th>`).join("")}</tr>`
+    + ser.map(x => `<tr><td>${esc(x.label)}</td>${x.vals.map(v => `<td>${Math.round(v * 100)}</td>`).join("")}</tr>`).join("") + `</table>`;
+  for (const btn of $("colorby").querySelectorAll("button")) {
+    btn.classList.toggle("on", btn.dataset.c === S.colorBy);
+    btn.setAttribute("aria-pressed", btn.dataset.c === S.colorBy);
+    btn.onclick = () => {
+      S.colorBy = btn.dataset.c;
+      try { localStorage.setItem("explorer-colorby", S.colorBy); } catch (e) { /* storage unavailable */ }
+      renderCharts(); renderStep();
+    };
+  }
+}
+// branch: forks off its parent's line (placed below it); replace: continues the dead concept's line in a new color;
+// coexist: enters on its own line (short arrow from a hollow circle); sporadic: one shared bottom line.
+function treeLayout(n) {
+  const k = S.meta.steps.length;
+  const items = n.lineages.map((g, i) => {
+    const pres = n.lineage_shares.map(x => x[g.id] || 0);
+    const first = pres.findIndex(v => v > 0);
+    let last = -1;
+    pres.forEach((v, j) => { if (v > 0) last = j; });
+    return { ...g, i, pres, first, last };
+  }).filter(g => g.first >= 0 && g.birth);
+  const sporadic = items.filter(g => g.birth === "sporadic");
+  const byIdL = Object.fromEntries(items.map(g => [g.id, g]));
+  // place in dependency order (replaced / parent first), scanning by first appearance
+  const lanes = [], laneOf = {};
+  let rest = items.filter(g => g.birth !== "sporadic").sort((a, b) => a.first - b.first);
+  for (let round = 0; rest.length && round < 100; round++) {
+    const next = [];
+    for (const g of rest) {
+      if (g.birth === "replace" && byIdL[g.replaces]) {
+        if (laneOf[g.replaces] == null) { next.push(g); continue; }
+        laneOf[g.id] = laneOf[g.replaces];
+        lanes[laneOf[g.id]].items.push(g);
+      } else if (g.birth === "branch" && byIdL[g.birth_parent]) {
+        const pl = laneOf[g.birth_parent];
+        if (pl == null) { next.push(g); continue; }
+        laneOf[g.id] = lanes.length;
+        lanes.push({ items: [g], parentLane: pl, children: [] });
+        lanes[pl].children.push(laneOf[g.id]);
+      } else {
+        laneOf[g.id] = lanes.length;
+        lanes.push({ items: [g], parentLane: null, children: [] });
+      }
+    }
+    if (next.length === rest.length) {  // unresolvable dependency: own line
+      for (const g of next) { laneOf[g.id] = lanes.length; lanes.push({ items: [g], parentLane: null, children: [] }); }
+      break;
+    }
+    rest = next;
+  }
+  const rows = [];
+  const walk = li => { rows.push(li); for (const c of lanes[li].children) walk(c); };
+  lanes.forEach((l, li) => { if (l.parentLane == null) walk(li); });
+  const rowOf = {};
+  rows.forEach((li, r) => { rowOf[li] = r; });
+  return { lanes, rows, rowOf, laneOf, items, sporadic, k };
+}
+function treeChart(n) {
+  const svg = $("c-tree");
+  if (!svg) return;
+  const { lanes, rows, rowOf, laneOf, items, sporadic, k } = treeLayout(n), steps = S.meta.steps;
+  const W = svg.clientWidth || 640, pl = 14, pr = 14, edge = 14, gap = 13, pb = 4;
+  const yOf = li => edge + 8 + rowOf[li] * gap;
+  const spY = edge + 8 + rows.length * gap + 4;
+  const H = (sporadic.length ? spY + 6 : edge + 8 + Math.max(rows.length - 1, 0) * gap) + edge + pb;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.style.height = H + "px";
+  const colW = (W - pl - pr) / (k - 1), X = j => pl + j * colW, dx = colW * 0.55;
+  const top = 2, bottom = H - pb - 2;
+  const byId = Object.fromEntries(items.map(g => [g.id, g]));
+  const color = g => linColor(n, g);
+  const linCls = g => "lin" + (S.famFocus && families(n).rootOf[g.id] !== S.famFocus ? " dim" : "");
+  const arrows = S.colorBy === "family" ? FAM_COLORS.map((c, i) => ["f" + i, c]).concat([["fo", "var(--series-other)"]]) : MECH;
+  let h = `<defs>${arrows.map(([m, c]) => `<marker id="arr-${m}" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L6,3 L0,6 z" fill="${c}"/></marker>`).join("")}</defs>`;
+  h += steps.map((s, j) => `<rect x="${X(j) - colW / 2}" y="0" width="${colW}" height="${H - pb}" fill="transparent" data-col="${j}"/>`).join("");
+  h += steps.map((s, j) => `<line x1="${X(j)}" x2="${X(j)}" y1="${top}" y2="${bottom}" stroke="var(--border)" stroke-width="1"/>`).join("");
+  const si = steps.indexOf(S.step);
+  if (si >= 0) h += `<line x1="${X(si)}" x2="${X(si)}" y1="${top}" y2="${bottom}" stroke="var(--text-primary)" stroke-dasharray="4 3"/>`;
+  const curve = (x0, y0, x1, y1) => `M${x0},${y0} C${(x0 + x1) / 2},${y0} ${(x0 + x1) / 2},${y1} ${x1},${y1}`;
+  const width = (g, v) => (g.core ? 3 : 1.2) + 6 * Math.min(1, v);
+  // entering from outside: short arrow from a hollow circle
+  const enter = (x, y, c, m) => `<circle cx="${x - dx * 0.85}" cy="${y}" r="2.2" fill="var(--surface-1)" stroke="${c}" stroke-width="1.2"/>`
+    + `<path d="M${x - dx * 0.85 + 2.2},${y} L${x},${y}" stroke="${c}" stroke-width="1.4" marker-end="url(#arr-${m})"/>`;
+  const replacedBy = {};
+  for (const g of items) if (g.birth === "replace" && g.replaces) replacedBy[g.replaces] = g;
+  for (const g of items.filter(x => x.birth !== "sporadic")) {
+    const y = yOf(laneOf[g.id]), c = color(g), parts = [];
+    // birth
+    if (g.birth === "branch" && byId[g.birth_parent] && laneOf[g.birth_parent] != null) {
+      const p = byId[g.birth_parent], py = yOf(laneOf[p.id]);
+      const at = Math.max(0, g.first - 1), xs = g.first > 0 ? X(at) : X(0) - pl + 2;
+      // parent absent at the fork: extend its line dashed to the fork
+      if (p.last < at) parts.push(`<path d="M${X(p.last)},${py} L${X(at)},${py}" stroke="${color(p)}" stroke-width="1.2" stroke-dasharray="2 4" opacity=".7"/>`);
+      if (p.first > at) parts.push(`<path d="M${xs},${py} L${X(p.first)},${py}" stroke="${color(p)}" stroke-width="1.2" stroke-dasharray="2 4" opacity=".7"/>`);
+      parts.push(`<circle cx="${xs}" cy="${py}" r="2" fill="${c}"/>`);
+      parts.push(`<path d="${curve(xs, py, X(g.first), y)}" fill="none" stroke="${c}" stroke-width="1.8" marker-end="url(#arr-${arrowKey(n, g)})"/>`);
+    } else if (g.birth === "replace" && byId[g.replaces]) {
+      parts.push(`<path d="M${X(g.first - 1)},${y} L${X(g.first)},${y}" stroke="${c}" stroke-width="${width(g, g.pres[g.first])}" stroke-linecap="round"/>`);
+      parts.push(`<line x1="${X(g.first - 1)}" x2="${X(g.first - 1)}" y1="${y - 6}" y2="${y + 6}" stroke="var(--text-primary)" stroke-width="1.5"/>`);
+    } else if (g.first === 0) {
+      parts.push(`<path d="M${X(0) - pl + 2},${y} L${X(0)},${y}" stroke="${c}" stroke-width="${width(g, g.pres[0])}"/>`);
+    } else {
+      parts.push(enter(X(g.first), y, c, arrowKey(n, g)));
+    }
+    // lifetime: solid while present, dashed across gaps
+    for (let j = g.first; j < g.last; j++) {
+      const on = g.pres[j] > 0 && g.pres[j + 1] > 0;
+      parts.push(on
+        ? `<path d="M${X(j)},${y} L${X(j + 1)},${y}" stroke="${c}" stroke-width="${width(g, (g.pres[j] + g.pres[j + 1]) / 2)}" stroke-linecap="round"/>`
+        : `<path d="M${X(j)},${y} L${X(j + 1)},${y}" stroke="${c}" stroke-width="1.2" stroke-dasharray="2 4" opacity=".7"/>`);
+    }
+    // death: replaced lines continue as the replacer; others fade out; survivors run to the right edge
+    if (g.last === k - 1) {
+      parts.push(`<path d="M${X(k - 1)},${y} L${W - 2},${y}" stroke="${c}" stroke-width="${width(g, g.pres[k - 1])}"/>`);
+    } else if (!replacedBy[g.id]) {
+      parts.push(`<path d="M${X(g.last)},${y} L${X(g.last) + dx * 0.5},${y}" stroke="${c}" stroke-width="${width(g, g.pres[g.last])}" stroke-linecap="round" opacity=".35"/>`);
+    }
+    g.pres.forEach((v, j) => { if (v > 0) parts.push(`<circle cx="${X(j)}" cy="${y}" r="${2 + 2.5 * Math.min(1, v)}" fill="${c}" stroke="var(--surface-1)" stroke-width="1.5"/>`); });
+    const x0 = g.first > 0 ? X(g.first - 1) : 0, x1 = g.last === k - 1 ? W : X(g.last) + dx * 0.5;
+    parts.push(`<path d="M${x0},${y} L${x1},${y}" stroke="transparent" stroke-width="12" pointer-events="stroke"/>`);
+    h += `<g class="${linCls(g)}" data-g="${esc(g.id)}" style="cursor:pointer">${parts.join("")}</g>`;
+  }
+  // sporadic: faint bottom line with one short arrow each
+  if (sporadic.length) {
+    h += `<line x1="${X(0)}" x2="${X(k - 1)}" y1="${spY}" y2="${spY}" stroke="var(--border)" stroke-width="1"/>`;
+    for (const g of sporadic) {
+      const c = color(g), j = g.first;
+      h += `<g class="${linCls(g)}" data-g="${esc(g.id)}" style="cursor:pointer">${enter(X(j), spY, c, arrowKey(n, g))}
+        <circle cx="${X(j)}" cy="${spY}" r="${2 + 2.5 * Math.min(1, g.pres[j])}" fill="${c}" stroke="var(--surface-1)" stroke-width="1.5"/>
+        <path d="M${X(j) - dx},${spY} L${X(j) + 4},${spY}" stroke="transparent" stroke-width="10" pointer-events="stroke"/></g>`;
+    }
+  }
+  svg.innerHTML = h;
+  const nameOf = id => { const i = n.lineages.findIndex(x => x.id === id); return i >= 0 ? Li(n, "lineages", i, "name") : id; };
+  const info = id => {
+    const g = byId[id], i = n.lineages.findIndex(x => x.id === id);
+    const span = g.first === g.last ? t("treeOnce")(num(steps[g.first]))
+      : g.last === k - 1 ? t("treeOngoing")(num(steps[g.first])) : t("treeSpan")(num(steps[g.first]), num(steps[g.last]));
+    const how = Li(n, "lineages", i, "how");
+    return `<b>${esc(nameOf(id))}</b>${g.core ? ` · ${t("coreTag")}` : ""}<br><span class="muted">${esc(E("mech", g.birth))} · ${span}</span>`
+      + (g.birth === "branch" ? `<br>${t("treeFrom")(esc(nameOf(g.birth_parent)))}` : "")
+      + (S.colorBy === "family" && families(n).rootOf[id] !== id ? `<br>${t("treeFam")(esc(nameOf(families(n).rootOf[id])))}` : "")
+      + (g.birth === "replace" && g.replaces ? `<br>${t("treeReplaces")(esc(nameOf(g.replaces)))}` : "")
+      + (how ? `<br>${esc(how)}` : "");
+  };
+  svg.onmousemove = ev => {
+    const el = ev.target.closest("g.lin");
+    svg.classList.toggle("focus", !!el && !S.famFocus);
+    for (const x of svg.querySelectorAll("g.lin")) x.classList.toggle("on", x === el);
+    tip(ev, el ? info(el.dataset.g) : null);
+  };
+  svg.onmouseleave = ev => { svg.classList.remove("focus"); tip(ev, null); };
+  svg.onclick = ev => {
+    const el = ev.target.closest("g.lin");
+    if (el) { // click a line: focus its family; click again to clear
+      const r = families(n).rootOf[el.dataset.g];
+      S.famFocus = S.famFocus === r ? null : r;
+      return renderCharts();
+    }
+    const col = ev.target.closest("rect[data-col]");
+    if (col) setStep(steps[+col.dataset.col]);
+  };
+}
+function moveStep(d) {
+  const i = S.rows.findIndex(r => r.step === S.step);
+  setStep(S.rows[Math.max(0, Math.min(S.rows.length - 1, i + d))].step);
+}
+function setStep(s) { S.step = s; renderEvo(); renderCharts(); renderStep(); }
+function renderEvo() {
+  const loss = Object.fromEntries(S.meta.steps.map((s, i) => [s, S.meta.loss[i]]));
+  $("evo").innerHTML = S.rows.map(r => `<tr class="${r.step === S.step ? "sel" : ""}" data-s="${r.step}" tabindex="0">
+    <td class="num">${num(r.step)}</td><td class="num">${loss[r.step]?.toFixed(2) ?? ""}</td>
+    <td class="num">${r.det == null ? "—" : `<span class="detbar" style="width:${Math.max(0, (r.det - 0.5) * 2) * 40}px"></span>${r.det.toFixed(2)}`}</td>
+    <td class="num">${r.clarity ?? ""}</td><td>${esc(L(r, "concept"))}</td><td class="sec">${esc(L(r, "description"))}</td></tr>`).join("");
+  for (const tr of $("evo").querySelectorAll("tr")) {
+    tr.onclick = () => setStep(+tr.dataset.s);
+    tr.onkeydown = e => { if (e.key === "Enter") setStep(+tr.dataset.s); };
+  }
+}
+
+// ---------- charts ----------
+function mechChart(n) {
+  const svg = $("c-mech");
+  if (!svg || !n.mech) return;
+  const W = svg.clientWidth || 600, H = 150, pl = 14, pr = 14, pt = 4, pb = 20, steps = S.meta.steps, k = steps.length;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const colW = (W - pl - pr) / (k - 1), X = j => pl + j * colW, bw = Math.min(colW * 0.7, 28);
+  const Y = v => pt + (H - pt - pb) * (1 - v);
+  const ser = barSeries(n), fk = S.colorBy === "family" ? focusKey(n) : null;
+  let h = `<line x1="${pl - bw / 2}" x2="${W - pr + bw / 2}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--border)"/>`;
+  const every = colW < 26 ? 4 : 2;
+  steps.forEach((s, i) => {
+    let acc = 0;
+    for (const x of ser) {
+      const v = x.vals[i];
+      if (v <= 0) continue;
+      h += `<rect x="${X(i) - bw / 2}" y="${Y(acc + v)}" width="${bw}" height="${Math.max(0, Y(acc) - Y(acc + v))}" fill="${x.color}" stroke="var(--surface-1)" stroke-width="2"${fk && x.key !== fk ? ' opacity=".15"' : ""}/>`;
+      acc += v;
+    }
+    if (s === S.step) h += `<rect x="${X(i) - bw / 2 - 3}" y="${pt - 2}" width="${bw + 6}" height="${H - pt - pb + 4}" fill="none" stroke="var(--text-primary)" stroke-width="1.5" stroke-dasharray="3 2" rx="3"/>`;
+    if (i % every === 0 || i === k - 1) h += `<text x="${X(i)}" y="${H - 5}" text-anchor="middle">${fmtAxis(s)}</text>`;
+  });
+  h += steps.map((s, i) => `<rect x="${X(i) - colW / 2}" y="${pt}" width="${colW}" height="${H - pt - pb}" fill="transparent" data-i="${i}"/>`).join("");
+  svg.innerHTML = h;
+  svg.onmousemove = ev => {
+    const r = ev.target.closest("rect[data-i]");
+    if (!r) return tip(ev, null);
+    const i = +r.dataset.i;
+    tip(ev, `<b>${fmtStep(steps[i])}</b><br>` + ser.filter(x => x.vals[i] > 0).map(x => `${esc(x.label)}: ${Math.round(x.vals[i] * 100)}%`).join("<br>"));
+  };
+  svg.onmouseleave = ev => tip(ev, null);
+  svg.onclick = ev => { const r = ev.target.closest("rect[data-i]"); if (r) setStep(steps[+r.dataset.i]); };
+}
+function renderCharts() {
+  const n = S.meta.neurons.find(x => x.id === S.sel);
+  if (!n || !n.lineages || !n.lineages.length) return;
+  paintEvoText(n);
+  treeChart(n);
+  mechChart(n);
+}
+
+// ---------- texts at one step ----------
+function ctxHTML(c, i, top1) {
+  let h = "";
+  c.tokens.forEach((tok, j) => {
+    const a = c.a[j], alpha = a > 0 ? Math.min(a, 100) / 100 * 0.8 : 0;
+    let txt = esc(tok).replace(/\n/g, '<span class="nl">↵</span>\n');
+    if (txt === "") txt = "​";
+    h += `<span class="t${j === c.hit ? " hit" : ""}" data-a="${a}" data-v="${(a / 100 * top1).toFixed(2)}" style="background:rgba(var(--hl),${alpha.toFixed(2)})">${txt}</span>`;
+  });
+  return `<div class="ctx"><div class="meta"><span><b>[${i + 1}]</b></span><span>${t("act")} <b>${c.value.toFixed(2)}</b></span>
+    <span class="chip">${esc(c.subset)}</span><span>${t("doc")} ${c.doc} · ${t("pos")} ${c.pos}</span></div><div class="text">${h}</div></div>`;
+}
+function stepCol(r) {
+  const n = S.meta.neurons.find(x => x.id === S.sel);
+  const linOf = id => (n.lineages || []).findIndex(g => g.id === id);
+  const pats = r.patterns.map((p, pi) => {
+    const gi = linOf(p.lineage), g = gi >= 0 ? n.lineages[gi] : null;
+    const pe = S.lang === "en" && r.en && r.en.patterns && r.en.patterns[pi] ? r.en.patterns[pi] : p;
+    return `<div class="pat">${g ? `<span class="chip" title="${esc(Li(n, "lineages", gi, "name"))}"><i class="swatch" style="background:${linColor(n, g)}"></i>${esc(E("mech", g.birth))}</span>` : ""}<b>${esc(pe.name || p.name)}</b> <code>${esc(p.trigger)}</code>
+      <span class="muted">${t("seg")} ${(p.segments || []).map(x => "[" + x + "]").join("")}</span>
+      <div class="small sec">${esc([pe.context || p.context, pe.domain || p.domain].filter(Boolean).join("; "))}</div></div>`;
+  }).join("");
+  const un = r.unexplained && r.unexplained.length ? t("unexplained")(r.unexplained.map(x => "[" + x + "]").join("")).replace(/^ · /, "") : "";
+  return `<div><h2>${fmtStep(r.step)} &nbsp;<span class="sec" style="font-weight:400">${esc(L(r, "concept"))}</span></h2>
+    <div class="small">${esc(L(r, "description"))}</div>
+    ${un ? `<div class="small muted" style="margin:4px 0">${un}</div>` : ""}
+    <details ${S.cmp == null ? "open" : ""}><summary>${t("patterns")(r.patterns.length)}</summary>${pats}</details>
+    ${r.contexts.slice(0, S.topn).map((c, i) => ctxHTML(c, i, r.top1)).join("")}</div>`;
+}
+function renderStep() {
+  const r = S.rows.find(x => x.step === S.step), c = S.cmp != null ? S.rows.find(x => x.step === S.cmp) : null;
+  $("stephdr").textContent = t("actual")(num(S.step), c ? num(c.step) : null);
+  $("stepcols").innerHTML = stepCol(r) + (c ? stepCol(c) : "");
+}
+document.addEventListener("mousemove", ev => {
+  const el = ev.target.closest && ev.target.closest(".text span.t");
+  if (!el) { if (ev.target.closest && ev.target.closest(".text")) tip(ev, null); return; }
+  tip(ev, `${esc(JSON.stringify(el.textContent.replace(/↵/g, "")))} &nbsp;${t("tipAct")(el.dataset.v, el.dataset.a)}`);
+});
+document.addEventListener("keydown", ev => {
+  if (!S.rows || ["INPUT", "SELECT", "TEXTAREA"].includes(ev.target.tagName)) return;
+  if (ev.key === "ArrowLeft") moveStep(-1);
+  if (ev.key === "ArrowRight") moveStep(1);
+});
+
+// ---------- start ----------
+(async () => {
+  try { if (localStorage.getItem("explorer-colorby") === "family") S.colorBy = "family"; } catch (e) { /* storage unavailable */ }
+  $("guide").onclick = () => $("guidebox").showModal();
+  $("guide-close").onclick = () => $("guidebox").close();
+  $("guidebox").onclick = e => {
+    const r = $("guidebox").getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) $("guidebox").close();
+  };
+  setLang("en");
+  S.meta = await (await fetch("data/meta.json")).json();
+  $("grouping").onchange = () => { S.grouping = $("grouping").value; S.group = null; renderLeft(); };
+  $("search").oninput = e => { S.query = e.target.value; renderList(); renderMap(); };
+  $("mapstep").max = String(S.meta.steps.length - 1);
+  S.mapIdx = S.meta.steps.length - 1;
+  $("mapstep").oninput = e => setMapIdx(+e.target.value);
+  $("mapplay").onclick = togglePlay;
+  bindMap();
+  setLang(S.lang);
+  // #L6-N201 in the URL opens that neuron; otherwise a representative example
+  const m = /^#?L(\d+)-N(\d+)$/.exec(location.hash || "");
+  const first = m ? `${m[1]}_${m[2]}` : (S.meta.neurons.find(n => n.id === "9_2943") || S.meta.neurons[0]).id;
+  await select(first);
+  addEventListener("resize", () => { if (S.rows) renderCharts(); });
+})();
+</script>

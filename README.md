@@ -2,6 +2,7 @@
 
 How MLP neurons of Pythia-160M change over training. An LLM explains 240 neurons at 40 checkpoints; the explanations are scored, then grouped into concept lineages (branch, replacement, unrelated coexistence, sporadic).
 
+- **Blog post:** https://heartyhaven.github.io/blog/neuron-evolution/
 - **Explorer:** https://heartyhaven.github.io/pythia-neuron-explorer/
 - **Dataset:** https://huggingface.co/datasets/LangGao/pythia-160m-neuron-evolution
 

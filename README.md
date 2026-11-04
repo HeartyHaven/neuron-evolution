@@ -48,3 +48,15 @@ Cost: about 20k OpenAI calls (9,600 explain + 9,600 detect + 480 judge + 240 lin
 
 - Biderman et al., *Pythia: A Suite for Analyzing Large Language Models Across Training and Scaling*, 2023.
 - Gao et al., *The Pile*, 2020 ([monology/pile-uncopyrighted](https://huggingface.co/datasets/monology/pile-uncopyrighted)).
+
+---
+We are very glad to open-source our analysis. If you feel useful, please cite:
+
+```
+@misc{gao2026neuronevolution,
+  title  = {Recursive Generalization and Superposition Are Both Right},
+  author = {Gao, Lang and Zhang, Jinghui and Chen, Xiuying},
+  year   = {2026},
+  url    = {https://heartyhaven.github.io/blog/neuron-evolution/}
+}
+```
